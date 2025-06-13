@@ -30,11 +30,26 @@ export default function App() {
       console.log(event);
     },
     onUpdateEvent: (event: any) => {
+      console.log("Received event:", event); // Debug logging
       let processedEvent: ProcessedEvent | null = null;
       if (event.generate_query) {
+        // Handle both array of strings and array of Query objects
+        const queries = event.generate_query.query_list;
+        let queryText = "";
+        if (Array.isArray(queries)) {
+          if (queries.length > 0 && typeof queries[0] === "string") {
+            queryText = queries.join(", ");
+          } else if (queries.length > 0 && typeof queries[0] === "object" && queries[0].query) {
+            queryText = queries.map((q: any) => q.query).join(", ");
+          } else if (queries.length > 0 && typeof queries[0] === "object") {
+            queryText = queries.map((q: any) => q.query || q).join(", ");
+          }
+        } else if (typeof queries === "string") {
+          queryText = queries;
+        }
         processedEvent = {
           title: "Generating Search Queries",
-          data: event.generate_query.query_list.join(", "),
+          data: queryText || "Generating queries...",
         };
       } else if (event.web_research) {
         const sources = event.web_research.sources_gathered || [];
@@ -50,13 +65,19 @@ export default function App() {
           }.`,
         };
       } else if (event.reflection) {
+        // Handle follow_up_queries safely
+        const followUpQueries = event.reflection.follow_up_queries;
+        let followUpText = "";
+        if (Array.isArray(followUpQueries)) {
+          followUpText = followUpQueries.join(", ");
+        } else if (typeof followUpQueries === "string") {
+          followUpText = followUpQueries;
+        }
         processedEvent = {
           title: "Reflection",
           data: event.reflection.is_sufficient
             ? "Search successful, generating final answer."
-            : `Need more information, searching for ${event.reflection.follow_up_queries.join(
-                ", "
-              )}`,
+            : `Need more information, searching for ${followUpText}`,
         };
       } else if (event.finalize_answer) {
         processedEvent = {

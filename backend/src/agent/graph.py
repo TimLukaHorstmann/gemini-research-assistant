@@ -78,7 +78,9 @@ def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerati
     )
     # Generate the search queries
     result = structured_llm.invoke(formatted_prompt)
-    return {"query_list": result.query}
+    # Convert the list of query strings to the expected Query format
+    query_list = [{"query": query, "rationale": result.rationale} for query in result.query]
+    return {"query_list": query_list}
 
 
 def continue_to_web_research(state: QueryGenerationState):
@@ -87,8 +89,8 @@ def continue_to_web_research(state: QueryGenerationState):
     This is used to spawn n number of web research nodes, one for each search query.
     """
     return [
-        Send("web_research", {"search_query": search_query, "id": int(idx)})
-        for idx, search_query in enumerate(state["query_list"])
+        Send("web_research", {"search_query": query_obj["query"], "id": int(idx)})
+        for idx, query_obj in enumerate(state["query_list"])
     ]
 
 
